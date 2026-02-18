@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── HR Admin Users ───────────────────────────────────────
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  hashedPassword String
+  name           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ─── Company ──────────────────────────────────────────────
+
+model Company {
+  id        String    @id @default(cuid())
+  name      String
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  managers  Manager[]
+  employees Employee[]
+  rounds    EvaluationRound[]
+}
+
+// ─── Manager ──────────────────────────────────────────────
+
+model Manager {
+  id        String    @id @default(cuid())
+  companyId String
+  name      String
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  company     Company      @relation(fields: [companyId], references: [id])
+  employees   Employee[]
+  evaluations Evaluation[]
+
+  @@index([companyId])
+}
+
+// ─── Employee ─────────────────────────────────────────────
+
+model Employee {
+  id        String    @id @default(cuid())
+  companyId String
+  managerId String
+  name      String
+  role      String
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  company     Company      @relation(fields: [companyId], references: [id])
+  manager     Manager      @relation(fields: [managerId], references: [id])
+  kpis        Kpi[]
+  evaluations Evaluation[]
+
+  @@index([companyId])
+  @@index([managerId])
+}
+
+// ─── KPI ──────────────────────────────────────────────────
+
+model Kpi {
+  id           String   @id @default(cuid())
+  employeeId   String
+  name         String
+  formQuestion String
+  order        Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  employee         Employee          @relation(fields: [employeeId], references: [id])
+  evaluationScores EvaluationScore[]
+
+  @@index([employeeId])
+}
+
+// ─── Evaluation Round ─────────────────────────────────────
+
+model EvaluationRound {
+  id          String   @id @default(cuid())
+  companyId   String
+  roundNumber Int
+  status      String   @default("in_progress") // "in_progress" | "completed"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company     Company      @relation(fields: [companyId], references: [id])
+  evaluations Evaluation[]
+
+  @@unique([companyId, roundNumber])
+  @@index([companyId])
+}
+
+// ─── Evaluation (one per employee per round) ──────────────
+
+model Evaluation {
+  id                     String    @id @default(cuid())
+  roundId                String
+  employeeId             String
+  managerId              String
+  managerFormToken       String    @unique @default(dbgenerated("gen_random_uuid()"))
+  employeeViewToken      String    @unique @default(dbgenerated("gen_random_uuid()"))
+  snapshotKpis           Json?
+  managerSubmittedAt     DateTime?
+  managerOpened          Boolean   @default(false)
+  managerRecommendations String?
+  hrPublished            Boolean   @default(false)
+  cancelledAt            DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  round    EvaluationRound   @relation(fields: [roundId], references: [id])
+  employee Employee          @relation(fields: [employeeId], references: [id])
+  manager  Manager           @relation(fields: [managerId], references: [id])
+  scores   EvaluationScore[]
+
+  @@index([roundId])
+  @@index([employeeId])
+  @@index([managerId])
+}
+
+// ─── Evaluation Score (one per KPI per evaluation) ────────
+
+model EvaluationScore {
+  id              String  @id @default(cuid())
+  evaluationId    String
+  kpiId           String
+  responseType    String  @default("rating")
+  responseData    Json    @default("{}")
+  managerScore    Int?
+  managerComment  String?
+  hrAdjustedScore Int?
+  hrComment       String?
+  showToEmployee  Boolean @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  evaluation Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  kpi        Kpi        @relation(fields: [kpiId], references: [id])
+
+  @@unique([evaluationId, kpiId])
+  @@index([evaluationId])
+}
