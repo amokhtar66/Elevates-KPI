@@ -102,9 +102,9 @@ export function ManagerEvaluationForm({
               data-kpi-id={kpi.id}
               className="rounded-lg border border-border bg-card p-4"
             >
-              <h3 className="font-semibold mb-1">{kpi.name}</h3>
+              <h3 className="font-semibold mb-1">{kpi.formQuestion}</h3>
               <p className="text-sm text-muted-foreground mb-3">
-                {kpi.formQuestion}
+                {kpi.name}
               </p>
               <div className="space-y-3">
                 <StarRating
@@ -117,7 +117,7 @@ export function ManagerEvaluationForm({
                   }
                 />
                 <Textarea
-                  placeholder="Optional comment..."
+                  placeholder="Add a comment"
                   value={scores[kpi.id]?.comment ?? ""}
                   onChange={(e) =>
                     setScores((prev) => ({
@@ -139,9 +139,6 @@ export function ManagerEvaluationForm({
             <Label htmlFor="recommendations" className="font-semibold text-base">
               Recommendations and Next Steps
             </Label>
-            <p className="text-sm text-muted-foreground mb-3">
-              Required — provide recommendations for the employee
-            </p>
             <Textarea
               id="recommendations"
               placeholder="Your recommendations and next steps for the employee..."

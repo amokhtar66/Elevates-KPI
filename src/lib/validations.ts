@@ -11,6 +11,7 @@ export const companySchema = z.object({
 
 export const managerSchema = z.object({
   name: z.string().min(1, "Manager name is required").max(100),
+  title: z.string().max(100).optional(),
   companyId: z.string().min(1),
 });
 

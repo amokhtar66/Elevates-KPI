@@ -21,6 +21,7 @@ export async function getManagers(companyId: string) {
 export async function createManager(formData: FormData) {
   const parsed = managerSchema.safeParse({
     name: formData.get("name"),
+    title: formData.get("title") || undefined,
     companyId: formData.get("companyId"),
   });
 
@@ -31,6 +32,7 @@ export async function createManager(formData: FormData) {
   await prisma.manager.create({
     data: {
       name: parsed.data.name,
+      title: parsed.data.title || null,
       companyId: parsed.data.companyId,
     },
   });
@@ -40,6 +42,7 @@ export async function createManager(formData: FormData) {
 
 export async function updateManager(id: string, formData: FormData) {
   const name = formData.get("name") as string;
+  const title = formData.get("title") as string;
   const companyId = formData.get("companyId") as string;
 
   if (!name?.trim()) {
@@ -48,7 +51,7 @@ export async function updateManager(id: string, formData: FormData) {
 
   await prisma.manager.update({
     where: { id },
-    data: { name },
+    data: { name, title: title?.trim() || null },
   });
 
   revalidatePath(`/companies/${companyId}`);

@@ -15,7 +15,7 @@ import {
 
 interface ManagerFormDialogProps {
   companyId: string;
-  manager?: { id: string; name: string };
+  manager?: { id: string; name: string; title?: string | null };
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -68,6 +68,15 @@ export function ManagerFormDialog({
               defaultValue={manager?.name ?? ""}
               placeholder="Manager name"
               required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="manager-title">Job Title</Label>
+            <Input
+              id="manager-title"
+              name="title"
+              defaultValue={manager?.title ?? ""}
+              placeholder="e.g. Engineering Manager"
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}

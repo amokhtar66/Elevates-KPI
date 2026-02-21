@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { StatusBadge, getEvaluationStatus } from "@/components/status-badge";
 import { EvaluationReviewForm } from "@/components/evaluations/evaluation-review-form";
 import { CopyLinkButton } from "@/components/copy-link-button";
+import { ShareWithEmployeeButton } from "@/components/evaluations/share-with-employee-button";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -36,12 +37,11 @@ export default async function EvaluationDetailPage({
   const status = getEvaluationStatus(evaluation);
 
   return (
-    <div>
+    <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-center gap-3">
         <Link href={`/companies/${companyId}/rounds/${roundId}`}>
           <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Back
+            <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div>
@@ -67,16 +67,27 @@ export default async function EvaluationDetailPage({
           <CopyLinkButton token={evaluation.managerFormToken} label="Copy Manager Form Link" />
         </div>
       ) : (
-        <EvaluationReviewForm
-          evaluationId={evaluationId}
-          companyId={companyId}
-          roundId={roundId}
-          scores={evaluation.scores}
-          managerRecommendations={evaluation.managerRecommendations}
-          isPublished={evaluation.hrPublished}
-        />
+        <>
+          <div className="mb-6">
+            <ShareWithEmployeeButton
+              evaluationId={evaluationId}
+              companyId={companyId}
+              roundId={roundId}
+              employeeViewToken={evaluation.employeeViewToken}
+              isPublished={evaluation.hrPublished}
+            />
+          </div>
+
+          <EvaluationReviewForm
+            evaluationId={evaluationId}
+            companyId={companyId}
+            roundId={roundId}
+            scores={evaluation.scores}
+            managerRecommendations={evaluation.managerRecommendations}
+            isPublished={evaluation.hrPublished}
+          />
+        </>
       )}
     </div>
   );
 }
-

@@ -7,40 +7,43 @@ export async function updateScores(
   evaluationId: string,
   companyId: string,
   roundId: string,
-  scores: Array<{
-    scoreId: string;
-    hrAdjustedScore: number | null;
-    hrComment: string | null;
-    showToEmployee: boolean;
-  }>
-) {
-  // Validate: if HR adjusted score is set, HR comment is required
-  for (const score of scores) {
-    if (score.hrAdjustedScore !== null && !score.hrComment?.trim()) {
-      return { error: "HR comment is required when adjusting a score" };
-    }
+  data: {
+    scores: Array<{
+      scoreId: string;
+      managerScore: number;
+      managerComment: string | null;
+    }>;
+    managerRecommendations: string;
   }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const score of data.scores) {
+        await tx.evaluationScore.update({
+          where: { id: score.scoreId },
+          data: {
+            managerScore: score.managerScore,
+            managerComment: score.managerComment,
+          },
+        });
+      }
 
-  await prisma.$transaction(async (tx) => {
-    for (const score of scores) {
-      await tx.evaluationScore.update({
-        where: { id: score.scoreId },
-        data: {
-          hrAdjustedScore: score.hrAdjustedScore,
-          hrComment: score.hrComment,
-          showToEmployee: score.showToEmployee,
-        },
+      await tx.evaluation.update({
+        where: { id: evaluationId },
+        data: { managerRecommendations: data.managerRecommendations },
       });
-    }
-  });
+    });
 
-  revalidatePath(
-    `/companies/${companyId}/rounds/${roundId}/evaluations/${evaluationId}`
-  );
-  return { success: true };
+    revalidatePath(
+      `/companies/${companyId}/rounds/${roundId}/evaluations/${evaluationId}`
+    );
+    return { success: true };
+  } catch {
+    return { success: false, error: "Failed to save changes" };
+  }
 }
 
-export async function publishEvaluation(
+export async function shareWithEmployee(
   evaluationId: string,
   companyId: string,
   roundId: string

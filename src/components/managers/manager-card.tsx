@@ -38,6 +38,7 @@ interface ManagerCardProps {
   manager: {
     id: string;
     name: string;
+    title?: string | null;
     companyId: string;
     _count: { employees: number };
   };
@@ -62,6 +63,9 @@ export function ManagerCard({ manager, employees = [] }: ManagerCardProps) {
                 {manager.name}
               </h4>
               <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                {manager.title && (
+                  <><span>{manager.title}</span> · </>
+                )}
                 <Users className="h-3 w-3" />
                 {manager._count.employees}{" "}
                 {manager._count.employees === 1 ? "report" : "reports"}

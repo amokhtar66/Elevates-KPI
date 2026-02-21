@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { EvaluationTable } from "@/components/evaluations/evaluation-table";
 import { CompleteRoundButton } from "@/components/rounds/complete-round-button";
+import { RoundNameEditor } from "@/components/rounds/round-name-editor";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -30,16 +31,20 @@ export default async function RoundDetailPage({
   if (!round || round.companyId !== companyId) notFound();
 
   return (
-    <div>
+    <div className="mx-auto max-w-4xl">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href={`/companies/${companyId}`}>
             <Button variant="ghost" size="sm">
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              Back
+              <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <h2 className="text-2xl font-bold">Round {round.roundNumber}</h2>
+          <RoundNameEditor
+            roundId={roundId}
+            companyId={companyId}
+            currentName={round.name}
+            roundNumber={round.roundNumber}
+          />
           <StatusBadge
             status={round.status as "in_progress" | "completed"}
           />

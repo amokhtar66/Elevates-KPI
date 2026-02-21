@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { updateScores, publishEvaluation } from "@/actions/scores";
+import { updateScores } from "@/actions/scores";
 import { StarDisplay, StarRating } from "./star-rating";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Pencil } from "lucide-react";
 
 interface Score {
   id: string;
@@ -33,9 +32,9 @@ export function EvaluationReviewForm({
   companyId,
   roundId,
   scores: initialScores,
-  managerRecommendations,
-  isPublished,
+  managerRecommendations: initialRecommendations,
 }: EvaluationReviewFormProps) {
+  const [isEditMode, setIsEditMode] = useState(false);
   const [scores, setScores] = useState(
     initialScores.map((s) => ({
       scoreId: s.id,
@@ -43,10 +42,10 @@ export function EvaluationReviewForm({
       kpiQuestion: s.kpi.formQuestion,
       managerScore: s.managerScore ?? 0,
       managerComment: s.managerComment ?? "",
-      hrAdjustedScore: s.hrAdjustedScore,
-      hrComment: s.hrComment ?? "",
-      showToEmployee: s.showToEmployee,
     }))
+  );
+  const [recommendations, setRecommendations] = useState(
+    initialRecommendations ?? ""
   );
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -57,17 +56,14 @@ export function EvaluationReviewForm({
     setSaveMessage(null);
     setSaving(true);
 
-    const result = await updateScores(
-      evaluationId,
-      companyId,
-      roundId,
-      scores.map((s) => ({
+    const result = await updateScores(evaluationId, companyId, roundId, {
+      scores: scores.map((s) => ({
         scoreId: s.scoreId,
-        hrAdjustedScore: s.hrAdjustedScore,
-        hrComment: s.hrComment || null,
-        showToEmployee: s.showToEmployee,
-      }))
-    );
+        managerScore: s.managerScore,
+        managerComment: s.managerComment || null,
+      })),
+      managerRecommendations: recommendations,
+    });
 
     setSaving(false);
 
@@ -77,123 +73,115 @@ export function EvaluationReviewForm({
     }
 
     setSaveMessage("Saved successfully");
+    setIsEditMode(false);
     setTimeout(() => setSaveMessage(null), 3000);
-  }
-
-  async function handlePublish() {
-    setError(null);
-    const result = await publishEvaluation(evaluationId, companyId, roundId);
-    if (result.success) {
-      setSaveMessage("Published successfully");
-    }
   }
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Evaluation Scores</h3>
+        {!isEditMode && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsEditMode(true)}
+          >
+            <Pencil className="mr-1 h-3 w-3" />
+            Edit Mode
+          </Button>
+        )}
+      </div>
+
       {scores.map((score, i) => (
         <div
           key={score.scoreId}
           className="rounded-lg border border-border bg-card p-4 space-y-3"
         >
           <div>
-            <h4 className="font-semibold">{score.kpiName}</h4>
-            <p className="text-xs text-muted-foreground">
-              {score.kpiQuestion}
-            </p>
+            <h4 className="font-semibold">{score.kpiQuestion}</h4>
+            <p className="text-xs text-muted-foreground">{score.kpiName}</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Manager Score */}
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">
-                Manager Score
-              </p>
-              <StarDisplay value={score.managerScore} />
-              {score.managerComment && (
-                <p className="mt-1 text-sm text-muted-foreground italic">
-                  {score.managerComment}
-                </p>
-              )}
-            </div>
-
-            {/* HR Adjusted Score */}
-            <div data-hr-score>
-              <p className="text-xs text-muted-foreground mb-1">
-                HR Adjusted Score
-              </p>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Score</p>
+            {isEditMode ? (
               <StarRating
-                value={score.hrAdjustedScore ?? 0}
+                value={score.managerScore}
                 onChange={(val) =>
                   setScores((prev) =>
                     prev.map((s, j) =>
-                      j === i ? { ...s, hrAdjustedScore: val } : s
+                      j === i ? { ...s, managerScore: val } : s
                     )
                   )
                 }
               />
-            </div>
+            ) : (
+              <StarDisplay value={score.managerScore} />
+            )}
           </div>
 
-          {/* HR Comment */}
           <div>
-            <Label className="text-xs">HR Comment</Label>
-            <Textarea
-              data-hr-comment
-              placeholder="Required if adjusting score..."
-              value={score.hrComment}
-              onChange={(e) =>
-                setScores((prev) =>
-                  prev.map((s, j) =>
-                    j === i ? { ...s, hrComment: e.target.value } : s
+            <p className="text-xs text-muted-foreground mb-1">Comment</p>
+            {isEditMode ? (
+              <Textarea
+                placeholder="Add a comment"
+                value={score.managerComment}
+                onChange={(e) =>
+                  setScores((prev) =>
+                    prev.map((s, j) =>
+                      j === i ? { ...s, managerComment: e.target.value } : s
+                    )
                   )
-                )
-              }
-              rows={2}
-            />
-          </div>
-
-          {/* Show to Employee Toggle */}
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={score.showToEmployee}
-              onCheckedChange={(checked) =>
-                setScores((prev) =>
-                  prev.map((s, j) =>
-                    j === i ? { ...s, showToEmployee: checked } : s
-                  )
-                )
-              }
-            />
-            <Label className="text-xs">Show to Employee</Label>
+                }
+                rows={2}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                {score.managerComment || "—"}
+              </p>
+            )}
           </div>
         </div>
       ))}
 
-      {/* Manager Recommendations (read-only) */}
-      {managerRecommendations && (
-        <div className="rounded-lg border border-border bg-card p-4">
-          <h4 className="font-semibold mb-2">
-            Manager Recommendations &amp; Next Steps
-          </h4>
+      {/* Recommendations */}
+      <div className="rounded-lg border border-border bg-card p-4">
+        <h4 className="font-semibold mb-2">
+          Recommendations &amp; Next Steps
+        </h4>
+        {isEditMode ? (
+          <Textarea
+            value={recommendations}
+            onChange={(e) => setRecommendations(e.target.value)}
+            rows={4}
+            placeholder="Recommendations and next steps..."
+          />
+        ) : (
           <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-            {managerRecommendations}
+            {recommendations || "—"}
           </p>
-        </div>
-      )}
+        )}
+      </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
       {saveMessage && (
         <p className="text-sm text-success">{saveMessage}</p>
       )}
 
-      <div className="flex gap-3">
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? "Saving..." : "Save"}
-        </Button>
-        <Button onClick={handlePublish} variant="default">
-          {isPublished ? "Republish" : "Publish"}
-        </Button>
-      </div>
+      {isEditMode && (
+        <div className="flex gap-3">
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setIsEditMode(false)}
+          >
+            Cancel
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

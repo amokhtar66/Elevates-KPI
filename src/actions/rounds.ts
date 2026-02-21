@@ -59,6 +59,39 @@ export async function getRounds(companyId: string) {
   });
 }
 
+export async function updateRoundName(
+  roundId: string,
+  name: string,
+  companyId: string
+) {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return { error: "Round name is required" };
+  }
+
+  // Check for duplicate name within the same company
+  const existing = await prisma.evaluationRound.findFirst({
+    where: {
+      companyId,
+      name: trimmed,
+      id: { not: roundId },
+    },
+  });
+
+  if (existing) {
+    return { error: "A round with this name already exists for this company" };
+  }
+
+  await prisma.evaluationRound.update({
+    where: { id: roundId },
+    data: { name: trimmed },
+  });
+
+  revalidatePath(`/companies/${companyId}`);
+  revalidatePath(`/companies/${companyId}/rounds/${roundId}`);
+  return { success: true };
+}
+
 export async function completeRound(roundId: string, companyId: string) {
   await prisma.evaluationRound.update({
     where: { id: roundId },

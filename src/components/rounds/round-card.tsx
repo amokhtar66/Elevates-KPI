@@ -6,6 +6,7 @@ interface RoundCardProps {
   round: {
     id: string;
     roundNumber: number;
+    name: string | null;
     status: string;
     evaluations: Array<{
       managerSubmittedAt: Date | null;
@@ -25,7 +26,7 @@ export function RoundCard({ round, companyId }: RoundCardProps) {
     <Link href={`/companies/${companyId}/rounds/${round.id}`}>
       <div className="rounded-lg border border-border bg-card p-4 transition-shadow hover:shadow-sm cursor-pointer">
         <div className="flex items-center justify-between mb-2">
-          <h4 className="font-semibold">Round {round.roundNumber}</h4>
+          <h4 className="font-semibold">{round.name || `Round ${round.roundNumber}`}</h4>
           <StatusBadge
             status={round.status as "in_progress" | "completed"}
           />

@@ -5,6 +5,12 @@ import { cancelEvaluation } from "@/actions/cancel-evaluation";
 import { StatusBadge, getEvaluationStatus } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -14,7 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Check, Copy, X } from "lucide-react";
+import { Check, Copy, MoreHorizontal, X } from "lucide-react";
 import Link from "next/link";
 
 interface Evaluation {
@@ -40,115 +46,133 @@ export function EvaluationTable({
   roundId,
 }: EvaluationTableProps) {
   const [cancelId, setCancelId] = useState<string | null>(null);
-  const [bulkCopied, setBulkCopied] = useState(false);
+  const [copiedManager, setCopiedManager] = useState<string | null>(null);
 
   const evalToCancel = evaluations.find((e) => e.id === cancelId);
 
-  function copyLink(token: string) {
-    const url = `${window.location.origin}/evaluate/${token}`;
-    navigator.clipboard.writeText(url);
+  // Group evaluations by manager
+  const byManager = new Map<string, Evaluation[]>();
+  for (const evaluation of evaluations) {
+    const key = evaluation.manager.name;
+    if (!byManager.has(key)) byManager.set(key, []);
+    byManager.get(key)!.push(evaluation);
   }
 
-  function copyAllLinks() {
-    const pendingEvals = evaluations.filter(
+  function copyManagerLinks(managerName: string) {
+    const managerEvals = byManager.get(managerName) ?? [];
+    const pending = managerEvals.filter(
       (e) => !e.managerSubmittedAt && !e.cancelledAt
     );
-    const links = pendingEvals
+    const links = pending
       .map(
         (e) =>
-          `${e.employee.name}: ${window.location.origin}/evaluate/${e.managerFormToken}`
+          `${e.employee.name}\n${window.location.origin}/evaluate/${e.managerFormToken}`
       )
-      .join("\n");
+      .join("\n\n");
     navigator.clipboard.writeText(links);
-    setBulkCopied(true);
-    setTimeout(() => setBulkCopied(false), 2000);
+    setCopiedManager(managerName);
+    setTimeout(() => setCopiedManager(null), 2000);
   }
 
   return (
     <>
-      <div className="mb-3 flex justify-end">
-        <Button variant="outline" size="sm" onClick={copyAllLinks}>
-          {bulkCopied ? (
-            <>
-              <Check className="mr-1 h-3 w-3" />
-              Copied!
-            </>
-          ) : (
-            <>
-              <Copy className="mr-1 h-3 w-3" />
-              Copy All Links
-            </>
-          )}
-        </Button>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-muted-foreground">
-              <th className="py-3 pr-4 font-medium">Employee</th>
-              <th className="py-3 pr-4 font-medium">Role</th>
-              <th className="py-3 pr-4 font-medium">Manager</th>
-              <th className="py-3 pr-4 font-medium">Status</th>
-              <th className="py-3 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {evaluations.map((evaluation) => {
-              const status = getEvaluationStatus(evaluation);
-              const canCancel =
-                !evaluation.managerSubmittedAt && !evaluation.cancelledAt;
-              return (
-                <tr
-                  key={evaluation.id}
-                  className="border-b border-border/50 last:border-0"
+      <div className="space-y-6">
+        {Array.from(byManager.entries()).map(
+          ([managerName, managerEvals]) => (
+            <div key={managerName}>
+              <div className="mb-2 flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  {managerName}
+                </h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copyManagerLinks(managerName)}
                 >
-                  <td className="py-3 pr-4">
-                    <Link
-                      href={`/companies/${companyId}/rounds/${roundId}/evaluations/${evaluation.id}`}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      {evaluation.employee.name}
-                    </Link>
-                  </td>
-                  <td className="py-3 pr-4 text-muted-foreground">
-                    {evaluation.employee.role}
-                  </td>
-                  <td className="py-3 pr-4 text-muted-foreground">
-                    {evaluation.manager.name}
-                  </td>
-                  <td className="py-3 pr-4">
-                    <StatusBadge status={status} />
-                  </td>
-                  <td className="py-3">
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyLink(evaluation.managerFormToken)}
-                        aria-label="Copy Manager Link"
-                      >
-                        <Copy className="mr-1 h-3 w-3" />
-                        Copy Link
-                      </Button>
-                      {canCancel && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setCancelId(evaluation.id)}
-                          aria-label="Cancel"
-                          className="text-destructive"
+                  {copiedManager === managerName ? (
+                    <>
+                      <Check className="mr-1 h-3 w-3" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="mr-1 h-3 w-3" />
+                      Copy Links
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="py-2 pr-4 font-medium">Employee</th>
+                      <th className="py-2 pr-4 font-medium">Role</th>
+                      <th className="py-2 pr-4 font-medium">Status</th>
+                      <th className="py-2 font-medium w-10"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {managerEvals.map((evaluation) => {
+                      const status = getEvaluationStatus(evaluation);
+                      const canCancel =
+                        !evaluation.managerSubmittedAt &&
+                        !evaluation.cancelledAt;
+                      return (
+                        <tr
+                          key={evaluation.id}
+                          className="border-b border-border/50 last:border-0"
                         >
-                          <X className="mr-1 h-3 w-3" />
-                          Cancel
-                        </Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                          <td className="py-2 pr-4">
+                            <Link
+                              href={`/companies/${companyId}/rounds/${roundId}/evaluations/${evaluation.id}`}
+                              className="font-medium text-primary hover:underline"
+                            >
+                              {evaluation.employee.name}
+                            </Link>
+                          </td>
+                          <td className="py-2 pr-4 text-muted-foreground">
+                            {evaluation.employee.role}
+                          </td>
+                          <td className="py-2 pr-4">
+                            <StatusBadge status={status} />
+                          </td>
+                          <td className="py-2">
+                            {canCancel && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    aria-label="More"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onSelect={() =>
+                                      setCancelId(evaluation.id)
+                                    }
+                                    className="text-destructive"
+                                  >
+                                    <X className="mr-2 h-4 w-4" />
+                                    Cancel Evaluation
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
+        )}
       </div>
 
       <AlertDialog

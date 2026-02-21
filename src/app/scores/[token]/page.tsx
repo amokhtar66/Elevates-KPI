@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { getEmployeeScores } from "@/actions/scores";
 import { StarDisplay } from "@/components/evaluations/star-rating";
 
+export const dynamic = "force-dynamic";
+
 export default async function EmployeeScorePage({
   params,
 }: {
@@ -26,13 +28,10 @@ export default async function EmployeeScorePage({
     );
   }
 
-  // Filter visible scores
-  const visibleScores = evaluation.scores.filter((s) => s.showToEmployee);
+  const allScores = evaluation.scores;
 
-  // Calculate overall score (HR-adjusted takes priority)
-  const scoreValues = visibleScores.map(
-    (s) => s.hrAdjustedScore ?? s.managerScore ?? 0
-  );
+  // Calculate overall score
+  const scoreValues = allScores.map((s) => s.managerScore ?? 0);
   const overallScore =
     scoreValues.length > 0
       ? scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length
@@ -66,34 +65,25 @@ export default async function EmployeeScorePage({
 
         {/* Individual KPI Scores */}
         <div className="space-y-4">
-          {visibleScores.map((score) => {
-            const displayScore =
-              score.hrAdjustedScore ?? score.managerScore ?? 0;
-            return (
-              <div
-                key={score.id}
-                className="rounded-lg border border-border bg-card p-4"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="font-semibold">{score.kpi.name}</h3>
-                  <StarDisplay value={displayScore} />
-                </div>
-                <p className="text-xs text-muted-foreground mb-2">
-                  {score.kpi.formQuestion}
-                </p>
-                {score.managerComment && (
-                  <p className="text-sm text-muted-foreground italic">
-                    {score.managerComment}
-                  </p>
-                )}
-                {score.hrComment && (
-                  <p className="text-sm text-muted-foreground italic mt-1">
-                    {score.hrComment}
-                  </p>
-                )}
+          {allScores.map((score) => (
+            <div
+              key={score.id}
+              className="rounded-lg border border-border bg-card p-4"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="font-semibold">{score.kpi.formQuestion}</h3>
+                <StarDisplay value={score.managerScore ?? 0} />
               </div>
-            );
-          })}
+              <p className="text-xs text-muted-foreground mb-2">
+                {score.kpi.name}
+              </p>
+              {score.managerComment && (
+                <p className="text-sm text-muted-foreground italic">
+                  {score.managerComment}
+                </p>
+              )}
+            </div>
+          ))}
         </div>
 
         {/* Manager Recommendations */}

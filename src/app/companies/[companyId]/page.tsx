@@ -54,8 +54,7 @@ export default async function CompanyDetailPage({
       <div className="mb-6 flex items-center gap-3">
         <Link href="/companies">
           <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Back
+            <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <h2 className="text-2xl font-bold">{company.name}</h2>
